@@ -11,6 +11,7 @@ import { PhotoMetadataModal } from './PhotoMetadataModal';
 import { PhotoUploadModal } from './PhotoUploadModal';
 import { GalleryPublishModal } from './GalleryPublishModal';
 import { TeamManagementModal } from './TeamManagementModal';
+import { ExportZipModal } from './ExportZipModal';
 
 interface EventWorkspaceProps {
   eventId: string;
@@ -46,6 +47,7 @@ export const EventWorkspace: React.FC<EventWorkspaceProps> = ({
   const [showUploadModal, setShowUploadModal] = useState<boolean>(false);
   const [showPublishModal, setShowPublishModal] = useState<boolean>(false);
   const [showTeamModal, setShowTeamModal] = useState<boolean>(false);
+  const [showExportModal, setShowExportModal] = useState<boolean>(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -416,6 +418,16 @@ export const EventWorkspace: React.FC<EventWorkspaceProps> = ({
               <span>Guest Gallery</span>
             </button>
           )}
+
+          {/* Export Event Photos as ZIP */}
+          <button
+            onClick={() => setShowExportModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-800 text-xs font-semibold transition shadow-2xs hover:border-neutral-300"
+            title="Export all event photos as ZIP"
+          >
+            <Download className="w-3.5 h-3.5 text-neutral-600" />
+            <span>Export ZIP</span>
+          </button>
         </div>
       </div>
 
@@ -890,6 +902,14 @@ export const EventWorkspace: React.FC<EventWorkspaceProps> = ({
             setEvent(updatedEvent);
             fetchEventDetails();
           }}
+        />
+      )}
+
+      {showExportModal && event && (
+        <ExportZipModal
+          event={event}
+          currentUser={currentUser}
+          onClose={() => setShowExportModal(false)}
         />
       )}
     </div>

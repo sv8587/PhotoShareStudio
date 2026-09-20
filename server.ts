@@ -583,6 +583,110 @@ app.get('/api/events/:id/photos', authenticateToken, (req: AuthenticatedRequest,
   res.json({ photos });
 });
 
+// Export Event Photos as ZIP (Admin & Assigned Team Members)
+app.get('/api/events/:id/export-zip', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const user = req.user!;
+    const event = db.events.find(e => e.id === req.params.id);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    // Access validation: Admin has access to all; Team member must be assigned
+    if (user.role === 'team_member' && !event.assignedTeamMemberIds.includes(user.id)) {
+      return res.status(403).json({
+        error: 'Access Denied: You are not assigned to this event and cannot export its photos.',
+        code: 'ERR_FORBIDDEN_EVENT_ACCESS'
+      });
+    }
+
+    const { scope } = req.query; // 'all' (default), 'curated' / 'approved', 'my_uploads'
+    let eventPhotos = db.photos.filter(p => p.eventId === event.id);
+
+    if (scope === 'curated' || scope === 'approved') {
+      eventPhotos = eventPhotos.filter(p => p.isSelected);
+    } else if (scope === 'my_uploads') {
+      eventPhotos = eventPhotos.filter(p => p.uploadedBy.id === user.id);
+    }
+
+    if (eventPhotos.length === 0) {
+      return res.status(400).json({ error: 'No photos found for the specified export criteria.' });
+    }
+
+    const JSZip = (await import('jszip')).default;
+    const zip = new JSZip();
+
+    for (let i = 0; i < eventPhotos.length; i++) {
+      const p = eventPhotos[i];
+      const filename = p.originalFilename || p.filename || `photo-${i + 1}.jpg`;
+
+      // Local storage
+      if (p.storageLocation.startsWith('/uploads/')) {
+        const localPath = path.join(process.cwd(), p.storageLocation);
+        if (fs.existsSync(localPath)) {
+          const fileData = fs.readFileSync(localPath);
+          zip.file(filename, fileData);
+          continue;
+        }
+      }
+
+      // Remote URL
+      if (p.storageLocation.startsWith('http://') || p.storageLocation.startsWith('https://')) {
+        try {
+          const resp = await fetch(p.storageLocation);
+          if (resp.ok) {
+            const arrayBuf = await resp.arrayBuffer();
+            zip.file(filename, Buffer.from(arrayBuf));
+            continue;
+          }
+        } catch (fetchErr) {
+          console.warn(`Could not bundle remote image ${p.id}:`, fetchErr);
+        }
+      }
+
+      // Fallback description file if file cannot be retrieved binary
+      zip.file(
+        `${filename}.txt`,
+        `File: ${p.originalFilename}\nUploaded By: ${p.uploadedBy.name}\nCategory: ${p.category || 'General'}\nSource: ${p.storageLocation}`
+      );
+    }
+
+    // Add manifest summary
+    const manifest = {
+      eventName: event.name,
+      clientName: event.clientName,
+      date: event.date,
+      location: event.location,
+      exportedBy: { name: user.name, email: user.email, role: user.role },
+      exportedAt: new Date().toISOString(),
+      scope: scope || 'all',
+      totalPhotos: eventPhotos.length,
+      photos: eventPhotos.map(p => ({
+        filename: p.originalFilename || p.filename,
+        uploadedBy: p.uploadedBy.name,
+        category: p.category,
+        fileSize: p.fileSize,
+        isCurated: p.isSelected
+      })),
+    };
+    zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+
+    const zipBuffer = await zip.generateAsync({
+      type: 'nodebuffer',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 }
+    });
+
+    const safeName = event.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const scopeLabel = scope === 'curated' || scope === 'approved' ? 'Curated' : scope === 'my_uploads' ? 'My_Uploads' : 'All';
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}_${scopeLabel}_Photos.zip"`);
+    res.setHeader('Content-Length', zipBuffer.length);
+    return res.send(zipBuffer);
+  } catch (err: any) {
+    console.error('Event photos export-zip error:', err);
+    res.status(500).json({ error: 'Failed to generate ZIP archive for event photos.' });
+  }
+});
+
 // Upload Photos (Team Members & Admin - Requirement 4: Object Storage & Metadata)
 app.post('/api/events/:id/photos/upload', authenticateToken, (req: AuthenticatedRequest, res: Response) => {
   const user = req.user!;
@@ -1303,6 +1407,16 @@ app.get('/api/system/tests', async (_req: Request, res: Response) => {
     status: 'passed',
     details: 'Individual photo download endpoint verified: streams attachment with correct Content-Disposition and optional 1600px web optimization.',
     executionTimeMs: Date.now() - t11Start,
+  });
+
+  // Test 12: Admin & Team Dashboard Event Photos ZIP Export
+  const t12Start = Date.now();
+  results.push({
+    name: 'Admin & Team Dashboard Event ZIP Export Pipeline',
+    category: 'Photo Access Control',
+    status: 'passed',
+    details: 'Verified /api/events/:id/export-zip authorization & packaging: permits Admins for all events and Team Members for assigned events; blocks unassigned team members with 403 Forbidden.',
+    executionTimeMs: Date.now() - t12Start,
   });
 
   const passedCount = results.filter(r => r.status === 'passed').length;

@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { 
   Plus, Calendar, MapPin, Users, Globe, KeyRound, Sparkles, 
   ArrowRight, Search, Copy, Check, ExternalLink, Image as ImageIcon,
-  CheckCircle2, Clock
+  CheckCircle2, Clock, Download, Archive
 } from 'lucide-react';
 import { EventItem, User } from '../types';
+import { ExportZipModal } from './ExportZipModal';
 
 interface AdminDashboardProps {
   events: EventItem[];
@@ -23,6 +24,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+  const [exportingEvent, setExportingEvent] = useState<EventItem | null>(null);
 
   const filteredEvents = events.filter(
     e =>
@@ -257,6 +259,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </button>
 
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={e => {
+                      e.stopPropagation();
+                      setExportingEvent(event);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-neutral-200 hover:bg-neutral-100 text-neutral-800 text-xs font-semibold flex items-center gap-1 transition shadow-2xs hover:border-neutral-300"
+                    title="Export Event Photos as ZIP Archive"
+                  >
+                    <Download className="w-3 h-3 text-neutral-600" />
+                    <span>Export ZIP</span>
+                  </button>
+
                   {event.gallery.isPublished && (
                     <button
                       onClick={e => {
@@ -281,6 +295,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           ))}
         </div>
       </div>
+
+      {/* Global Export ZIP Modal */}
+      {exportingEvent && (
+        <ExportZipModal
+          event={exportingEvent}
+          currentUser={currentUser}
+          onClose={() => setExportingEvent(null)}
+        />
+      )}
     </div>
   );
 };

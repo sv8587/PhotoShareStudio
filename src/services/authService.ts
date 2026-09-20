@@ -5,6 +5,7 @@ const STORAGE_KEY_CURRENT_USER = 'trizen_auth_current_user';
 const STORAGE_KEY_TOKEN = 'trizen_auth_token';
 const STORAGE_KEY_USERS_DB = 'trizen_users_db';
 const STORAGE_KEY_EXPLICIT_LOGOUT = 'trizen_explicit_logout';
+const SESSION_KEY_ACTIVE = 'trizen_session_active';
 
 // Helper to get all registered users (combines initial mock users and newly registered ones)
 export function getStoredUsers(): User[] {
@@ -45,6 +46,12 @@ export function getActiveUser(): User | null {
       return null;
     }
 
+    // Require an active session in the current browser session so the site always starts with the login page
+    const isSessionActive = sessionStorage.getItem(SESSION_KEY_ACTIVE) === 'true';
+    if (!isSessionActive) {
+      return null;
+    }
+
     const raw = localStorage.getItem(STORAGE_KEY_CURRENT_USER);
     if (raw) {
       const user = JSON.parse(raw);
@@ -53,16 +60,11 @@ export function getActiveUser(): User | null {
       }
     }
   } catch (err) {
-    console.warn('Failed to parse current user from localStorage:', err);
+    console.warn('Failed to parse current user from storage:', err);
   }
 
-  // Default initial persona (Admin Aarav Sharma) for smooth first-time evaluation
-  const defaultUser = INITIAL_USERS[0];
-  try {
-    localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(defaultUser));
-    localStorage.setItem(STORAGE_KEY_TOKEN, defaultUser.id);
-  } catch {}
-  return defaultUser;
+  // Starts on login page by default (no auto-login)
+  return null;
 }
 
 // Perform login with API first, then rock-solid local fallback
@@ -84,6 +86,7 @@ export async function loginWithCredentials(
     if (res.ok && contentType.includes('application/json')) {
       const data = await res.json();
       if (data.user && data.token) {
+        sessionStorage.setItem(SESSION_KEY_ACTIVE, 'true');
         localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(data.user));
         localStorage.setItem(STORAGE_KEY_TOKEN, data.token);
         localStorage.removeItem(STORAGE_KEY_EXPLICIT_LOGOUT);
@@ -115,6 +118,7 @@ export async function loginWithCredentials(
 
   const token = matchedUser.id;
   try {
+    sessionStorage.setItem(SESSION_KEY_ACTIVE, 'true');
     localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(matchedUser));
     localStorage.setItem(STORAGE_KEY_TOKEN, token);
     localStorage.removeItem(STORAGE_KEY_EXPLICIT_LOGOUT);
@@ -154,6 +158,7 @@ export async function registerNewUser(
     if (res.ok && contentType.includes('application/json')) {
       const data = await res.json();
       if (data.user && data.token) {
+        sessionStorage.setItem(SESSION_KEY_ACTIVE, 'true');
         localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(data.user));
         localStorage.setItem(STORAGE_KEY_TOKEN, data.token);
         localStorage.removeItem(STORAGE_KEY_EXPLICIT_LOGOUT);
@@ -193,6 +198,7 @@ export async function registerNewUser(
   saveStoredUsers(allUsers);
 
   try {
+    sessionStorage.setItem(SESSION_KEY_ACTIVE, 'true');
     localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(newUser));
     localStorage.setItem(STORAGE_KEY_TOKEN, newUser.id);
     localStorage.removeItem(STORAGE_KEY_EXPLICIT_LOGOUT);
@@ -204,6 +210,7 @@ export async function registerNewUser(
 // Perform sign out
 export function logoutUser(): void {
   try {
+    sessionStorage.removeItem(SESSION_KEY_ACTIVE);
     localStorage.removeItem(STORAGE_KEY_CURRENT_USER);
     localStorage.removeItem(STORAGE_KEY_TOKEN);
     localStorage.setItem(STORAGE_KEY_EXPLICIT_LOGOUT, 'true');

@@ -1,6 +1,7 @@
-import React from 'react';
-import { Camera, Calendar, MapPin, UploadCloud, ArrowRight, Shield, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import React, { useState } from 'react';
+import { Camera, Calendar, MapPin, UploadCloud, ArrowRight, Shield, AlertCircle, Image as ImageIcon, Download, Archive } from 'lucide-react';
 import { EventItem, User } from '../types';
+import { ExportZipModal } from './ExportZipModal';
 
 interface TeamDashboardProps {
   events: EventItem[];
@@ -13,6 +14,8 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
   currentUser,
   onSelectEvent,
 }) => {
+  const [exportingEvent, setExportingEvent] = useState<EventItem | null>(null);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Team Member Header Banner */}
@@ -122,10 +125,17 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
                 </div>
 
                 <div className="px-5 py-3.5 bg-neutral-50 border-t border-neutral-100 flex items-center justify-between">
-                  <span className="text-xs text-neutral-500 font-medium flex items-center gap-1">
-                    <UploadCloud className="w-3.5 h-3.5" />
-                    <span>Upload Ready</span>
-                  </span>
+                  <button
+                    onClick={e => {
+                      e.stopPropagation();
+                      setExportingEvent(event);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-neutral-200 hover:bg-neutral-100 text-neutral-800 text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs hover:border-neutral-300"
+                    title="Export Event Photos as ZIP Archive"
+                  >
+                    <Download className="w-3.5 h-3.5 text-neutral-600" />
+                    <span>Export ZIP</span>
+                  </button>
 
                   <span className="font-bold text-xs text-neutral-900 group-hover:text-sky-600 transition flex items-center gap-1">
                     <span>Open Upload Studio</span>
@@ -137,6 +147,15 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({
           </div>
         )}
       </div>
+
+      {/* Global Export ZIP Modal */}
+      {exportingEvent && (
+        <ExportZipModal
+          event={exportingEvent}
+          currentUser={currentUser}
+          onClose={() => setExportingEvent(null)}
+        />
+      )}
     </div>
   );
 };

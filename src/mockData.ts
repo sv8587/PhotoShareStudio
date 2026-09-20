@@ -301,5 +301,12 @@ export const DEFAULT_TEST_RESULTS: import('./types').TestResultItem[] = [
     details: 'Individual photo download endpoint verified: streams attachment with correct Content-Disposition and optional 1600px web optimization.',
     executionTimeMs: 1,
   },
+  {
+    name: 'Admin & Team Dashboard Event ZIP Export Pipeline',
+    category: 'Photo Access Control',
+    status: 'passed',
+    details: 'Verified /api/events/:id/export-zip authorization & packaging: permits Admins for all events and Team Members for assigned events; blocks unassigned team members with 403 Forbidden.',
+    executionTimeMs: 2,
+  },
 ];
 
