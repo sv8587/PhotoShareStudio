@@ -5,8 +5,8 @@ import { TeamDashboard } from './components/TeamDashboard';
 import { EventWorkspace } from './components/EventWorkspace';
 import { CustomerGallery } from './components/CustomerGallery';
 import { CreateEventModal } from './components/CreateEventModal';
+import { SystemTestModal } from './components/SystemTestModal';
 import { DocumentationModal } from './components/DocumentationModal';
-import { LoginView } from './components/LoginView';
 import { User, EventItem } from './types';
 
 export default function App() {
@@ -16,8 +16,9 @@ export default function App() {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [customerGallerySlug, setCustomerGallerySlug] = useState<string>('abc123');
 
-  // Modals & UI States
+  // Modals
   const [showCreateEvent, setShowCreateEvent] = useState<boolean>(false);
+  const [showTestsModal, setShowTestsModal] = useState<boolean>(false);
   const [showDocsModal, setShowDocsModal] = useState<boolean>(false);
   const [loadingInitial, setLoadingInitial] = useState<boolean>(true);
 
@@ -37,55 +38,22 @@ export default function App() {
     }
   };
 
-  // Restore authenticated session on mount from localStorage
+  // Initial login with Demo Admin
   useEffect(() => {
-    const restoreSession = async () => {
-      try {
-        const savedToken = localStorage.getItem('photoshare_auth_token');
-        if (savedToken) {
-          const res = await fetch('/api/auth/me', {
-            headers: { Authorization: `Bearer ${savedToken}` },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.user) {
-              setCurrentUser(data.user);
-              if (window.location.hash.startsWith('#gallery=')) {
-                setCurrentView('customer');
-              } else {
-                setCurrentView(data.user.role === 'admin' ? 'admin' : 'team');
-              }
-              await fetchEvents(data.user.id);
-              setLoadingInitial(false);
-              return;
-            }
-          }
-          localStorage.removeItem('photoshare_auth_token');
-        }
-      } catch (err) {
-        console.error('Session restoration error:', err);
-        localStorage.removeItem('photoshare_auth_token');
-      } finally {
-        setLoadingInitial(false);
-      }
-    };
-
-    restoreSession();
+    loginUser('admin@trizen.com');
   }, []);
 
-  const loginUser = async (email: string, password?: string): Promise<boolean> => {
+  const loginUser = async (email: string) => {
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email }),
       });
       const data = await res.json();
       if (res.ok && data.user) {
-        localStorage.setItem('photoshare_auth_token', data.token);
         setCurrentUser(data.user);
-
-        // Update view if not explicitly in guest customer gallery
+        // Automatically set view based on role if not on customer gallery
         if (currentView !== 'customer') {
           if (data.user.role === 'admin') {
             setCurrentView('admin');
@@ -95,25 +63,11 @@ export default function App() {
           setSelectedEventId(null);
         }
         await fetchEvents(data.user.id);
-        return true;
       }
-      return false;
     } catch (err) {
       console.error('Failed to log in user:', err);
-      return false;
-    }
-  };
-
-  const logoutUser = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (err) {
-      console.warn('Logout API notification skipped:', err);
     } finally {
-      localStorage.removeItem('photoshare_auth_token');
-      setCurrentUser(null);
-      setEvents([]);
-      setSelectedEventId(null);
+      setLoadingInitial(false);
     }
   };
 
@@ -144,12 +98,10 @@ export default function App() {
 
   const handleExitCustomerGallery = () => {
     window.location.hash = '';
-    if (currentUser) {
-      if (currentUser.role === 'admin') {
-        setCurrentView('admin');
-      } else {
-        setCurrentView('team');
-      }
+    if (currentUser?.role === 'admin') {
+      setCurrentView('admin');
+    } else {
+      setCurrentView('team');
     }
   };
 
@@ -157,17 +109,17 @@ export default function App() {
     setSelectedEventId(null);
     if (currentUser?.role === 'admin') {
       setCurrentView('admin');
-    } else if (currentUser) {
+    } else {
       setCurrentView('team');
     }
   };
 
   if (loadingInitial) {
     return (
-      <div className="min-h-screen bg-neutral-900 flex items-center justify-center">
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
         <div className="text-center space-y-3">
-          <div className="w-10 h-10 border-3 border-white border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-semibold text-neutral-400">Loading PhotoShare Studio...</p>
+          <div className="w-10 h-10 border-3 border-neutral-900 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-semibold text-neutral-600">Initializing Trizen PhotoShare Platform...</p>
         </div>
       </div>
     );
@@ -183,39 +135,29 @@ export default function App() {
     );
   }
 
-  // If user is not authenticated, render Login / Register screen
-  if (!currentUser) {
-    return (
-      <LoginView
-        onLogin={loginUser}
-        onOpenGuestGallery={handleOpenCustomerGallery}
-      />
-    );
-  }
-
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 flex flex-col font-sans">
-      {/* Universal Clean Navigation Bar with Role Indicator & Logout */}
+      {/* Top Universal Navigation Bar */}
       <Navbar
         currentUser={currentUser}
         onSwitchUser={email => loginUser(email)}
-        onLogout={logoutUser}
-        onOpenLogin={() => {}}
         onOpenCustomerGallery={() => handleOpenCustomerGallery('abc123')}
+        onOpenTests={() => setShowTestsModal(true)}
+        onOpenDocs={() => setShowDocsModal(true)}
         currentView={currentView}
         onNavigateHome={handleNavigateHome}
       />
 
       {/* Main View Router */}
       <main className="flex-1">
-        {currentView === 'workspace' && selectedEventId ? (
+        {currentView === 'workspace' && selectedEventId && currentUser ? (
           <EventWorkspace
             eventId={selectedEventId}
             currentUser={currentUser}
             onBack={handleNavigateHome}
             onOpenCustomerGallery={handleOpenCustomerGallery}
           />
-        ) : currentUser.role === 'admin' ? (
+        ) : currentUser?.role === 'admin' ? (
           <AdminDashboard
             events={events}
             currentUser={currentUser}
@@ -223,41 +165,35 @@ export default function App() {
             onCreateEventClick={() => setShowCreateEvent(true)}
             onOpenCustomerGallery={handleOpenCustomerGallery}
           />
-        ) : (
+        ) : currentUser ? (
           <TeamDashboard
             events={events}
             currentUser={currentUser}
             onSelectEvent={handleSelectEvent}
           />
-        )}
+        ) : null}
       </main>
 
-      {/* Professional Clean Production Footer */}
+      {/* Footer */}
       <footer className="bg-white border-t border-neutral-200 py-6 text-xs text-neutral-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-neutral-800">PhotoShare Studio</span>
-            <span className="text-neutral-400">•</span>
-            <span>Collaborative Event Photography & Client Delivery Platform</span>
+          <div>
+            <span className="font-bold text-neutral-800">TrizenAI Technologies</span> • Full-Stack Internship Challenge
           </div>
-          <div className="flex items-center gap-4 text-neutral-500">
-            <span className="inline-flex items-center gap-1.5 text-emerald-600 font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              System Operational
-            </span>
-            <span>•</span>
-            <button
-              onClick={() => setShowDocsModal(true)}
-              className="hover:text-neutral-900 transition underline cursor-pointer"
-            >
-              Architecture Specs
+          <div className="flex items-center gap-4">
+            <button onClick={() => setShowTestsModal(true)} className="hover:text-neutral-900 transition">
+              System Test Matrix
             </button>
+            <button onClick={() => setShowDocsModal(true)} className="hover:text-neutral-900 transition">
+              Architecture & DB Docs
+            </button>
+            <span className="text-neutral-400">Submission: talent@trizen-ai.com</span>
           </div>
         </div>
       </footer>
 
       {/* Global Modals */}
-      {showCreateEvent && (
+      {showCreateEvent && currentUser && (
         <CreateEventModal
           currentUser={currentUser}
           onClose={() => setShowCreateEvent(false)}
@@ -266,6 +202,10 @@ export default function App() {
             handleSelectEvent(newEvent.id);
           }}
         />
+      )}
+
+      {showTestsModal && (
+        <SystemTestModal onClose={() => setShowTestsModal(false)} />
       )}
 
       {showDocsModal && (

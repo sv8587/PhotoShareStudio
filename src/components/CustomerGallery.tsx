@@ -387,19 +387,19 @@ export const CustomerGallery: React.FC<CustomerGalleryProps> = ({
               </button>
             </form>
 
-            {/* Quick Demo PIN Helper */}
+            {/* Quick Helper for Demo Evaluation */}
             <div className="mt-6 pt-5 border-t border-neutral-700/60 text-center">
               <p className="text-[11px] text-neutral-400 mb-2">
-                Need a quick test PIN?
+                Evaluating this submission?
               </p>
               <button
                 id="demo-pin-autofill-btn"
                 type="button"
                 onClick={() => setPinInput('482917')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-750 hover:bg-neutral-700 border border-neutral-600 text-xs font-mono text-amber-300 transition cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-750 hover:bg-neutral-700 border border-neutral-600 text-xs font-mono text-amber-300 transition"
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Fill Demo PIN (482917)</span>
+                <span>Use Demo PIN: 482917</span>
               </button>
             </div>
           </div>

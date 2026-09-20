@@ -14,13 +14,13 @@ export const DocumentationModal: React.FC<DocumentationModalProps> = ({ onClose 
           <div className="flex items-center gap-2.5">
             <BookOpen className="w-5 h-5 text-neutral-900" />
             <div>
-              <h3 className="font-bold text-neutral-900 text-base">System Documentation & Architecture</h3>
-              <p className="text-xs text-neutral-500">Enterprise Photography Platform Specifications & Security Matrix</p>
+              <h3 className="font-bold text-neutral-900 text-base">Project Documentation & Architecture</h3>
+              <p className="text-xs text-neutral-500">TrizenAI Full-Stack Internship Challenge Specification</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200 transition cursor-pointer"
+            className="p-1 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200 transition"
           >
             <X className="w-5 h-5" />
           </button>
@@ -28,23 +28,23 @@ export const DocumentationModal: React.FC<DocumentationModalProps> = ({ onClose 
 
         {/* Content */}
         <div className="p-6 overflow-y-auto space-y-6 text-xs text-neutral-700 leading-relaxed">
-          {/* Platform Info */}
+          {/* Submission Info */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200">
-              <span className="text-neutral-400 block mb-0.5 font-medium">Platform</span>
-              <span className="font-bold text-neutral-900">PhotoShare Studio</span>
+              <span className="text-neutral-400 block mb-0.5 font-medium">Organization</span>
+              <span className="font-bold text-neutral-900">TrizenAI Technologies</span>
             </div>
             <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200">
-              <span className="text-neutral-400 block mb-0.5 font-medium">Environment</span>
-              <span className="font-bold text-neutral-900 truncate block">Cloud Run Production</span>
+              <span className="text-neutral-400 block mb-0.5 font-medium">Submission Email</span>
+              <span className="font-bold text-neutral-900 truncate block">talent@trizen-ai.com</span>
             </div>
             <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200">
-              <span className="text-neutral-400 block mb-0.5 font-medium">Security Matrix</span>
-              <span className="font-bold text-emerald-600">RBAC Enforced</span>
+              <span className="text-neutral-400 block mb-0.5 font-medium">Deadline</span>
+              <span className="font-bold text-neutral-900">Sept 20, 2026</span>
             </div>
             <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200">
               <span className="text-neutral-400 block mb-0.5 font-medium">Technology Stack</span>
-              <span className="font-bold text-neutral-900">React + Express + Sharp</span>
+              <span className="font-bold text-neutral-900">React 19 + Express</span>
             </div>
           </div>
 

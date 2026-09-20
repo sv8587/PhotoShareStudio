@@ -354,10 +354,6 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
   });
 });
 
-app.post('/api/auth/logout', (_req: Request, res: Response) => {
-  res.json({ success: true, message: 'Logged out successfully.' });
-});
-
 app.post('/api/auth/register', (req: Request, res: Response) => {
   const { name, email, role } = req.body;
   if (!name || !email) {
