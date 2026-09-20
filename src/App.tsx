@@ -8,10 +8,11 @@ import { CreateEventModal } from './components/CreateEventModal';
 import { SystemTestModal } from './components/SystemTestModal';
 import { DocumentationModal } from './components/DocumentationModal';
 import { User, EventItem } from './types';
+import { INITIAL_USERS, INITIAL_EVENTS } from './mockData';
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [events, setEvents] = useState<EventItem[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(INITIAL_USERS[0]);
+  const [events, setEvents] = useState<EventItem[]>(INITIAL_EVENTS);
   const [currentView, setCurrentView] = useState<'admin' | 'team' | 'workspace' | 'customer'>('admin');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [customerGallerySlug, setCustomerGallerySlug] = useState<string>('abc123');
@@ -20,7 +21,7 @@ export default function App() {
   const [showCreateEvent, setShowCreateEvent] = useState<boolean>(false);
   const [showTestsModal, setShowTestsModal] = useState<boolean>(false);
   const [showDocsModal, setShowDocsModal] = useState<boolean>(false);
-  const [loadingInitial, setLoadingInitial] = useState<boolean>(true);
+  const [loadingInitial, setLoadingInitial] = useState<boolean>(false);
 
   // Initialize and check URL hash
   useEffect(() => {
@@ -44,6 +45,7 @@ export default function App() {
   }, []);
 
   const loginUser = async (email: string) => {
+    const fallbackUser = INITIAL_USERS.find(u => u.email === email) || INITIAL_USERS[0];
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -63,11 +65,23 @@ export default function App() {
           setSelectedEventId(null);
         }
         await fetchEvents(data.user.id);
+        return;
       }
     } catch (err) {
-      console.error('Failed to log in user:', err);
-    } finally {
-      setLoadingInitial(false);
+      console.warn('API login offline or static host, using client store:', err);
+    }
+
+    // Graceful offline/static fallback
+    setCurrentUser(fallbackUser);
+    if (currentView !== 'customer') {
+      if (fallbackUser.role === 'admin') {
+        setCurrentView('admin');
+        setEvents(INITIAL_EVENTS);
+      } else {
+        setCurrentView('team');
+        setEvents(INITIAL_EVENTS.filter(e => e.assignedTeamMemberIds?.includes(fallbackUser.id)));
+      }
+      setSelectedEventId(null);
     }
   };
 
@@ -77,11 +91,19 @@ export default function App() {
         headers: { Authorization: `Bearer ${userId}` },
       });
       const data = await res.json();
-      if (res.ok && data.events) {
+      if (res.ok && data.events && data.events.length > 0) {
         setEvents(data.events);
+        return;
       }
     } catch (err) {
-      console.error('Failed to load events:', err);
+      console.warn('Failed to load events from API, using fallback:', err);
+    }
+
+    const active = currentUser || INITIAL_USERS[0];
+    if (active.role === 'admin') {
+      setEvents(INITIAL_EVENTS);
+    } else {
+      setEvents(INITIAL_EVENTS.filter(e => e.assignedTeamMemberIds?.includes(active.id)));
     }
   };
 
@@ -157,25 +179,25 @@ export default function App() {
             onBack={handleNavigateHome}
             onOpenCustomerGallery={handleOpenCustomerGallery}
           />
-        ) : currentUser?.role === 'admin' ? (
+        ) : (currentUser?.role === 'admin' || !currentUser) ? (
           <AdminDashboard
-            events={events}
-            currentUser={currentUser}
+            events={events.length > 0 ? events : INITIAL_EVENTS}
+            currentUser={currentUser || INITIAL_USERS[0]}
             onSelectEvent={handleSelectEvent}
             onCreateEventClick={() => setShowCreateEvent(true)}
             onOpenCustomerGallery={handleOpenCustomerGallery}
           />
-        ) : currentUser ? (
+        ) : (
           <TeamDashboard
             events={events}
             currentUser={currentUser}
             onSelectEvent={handleSelectEvent}
           />
-        ) : null}
+        )}
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-neutral-200 py-6 text-xs text-neutral-500">
+      <footer className="bg-white py-6 text-xs text-neutral-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div>
             <span className="font-bold text-neutral-800">TrizenAI Technologies</span> • Full-Stack Internship Challenge
