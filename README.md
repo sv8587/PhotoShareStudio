@@ -4,7 +4,7 @@
 > **Company**: TrizenAI Technologies Private Limited  
 > **Role**: Full-Stack Internship  
 > **Submission Email**: `talent@trizen-ai.com`  
-> **Deadline**: September 20, 2026 — 11:59 PM IST  
+> **Demo Link**: (https://photosharestudio.vercel.app/)  
 
 ---
 
