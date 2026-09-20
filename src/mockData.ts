@@ -8,6 +8,7 @@ export const INITIAL_USERS: User[] = [
     role: 'admin',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     createdAt: '2026-09-01T08:00:00Z',
+    password: 'admin123',
   },
   {
     id: 'usr-team-01',
@@ -16,6 +17,7 @@ export const INITIAL_USERS: User[] = [
     role: 'team_member',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
     createdAt: '2026-09-02T09:30:00Z',
+    password: 'team123',
   },
   {
     id: 'usr-team-02',
@@ -24,6 +26,7 @@ export const INITIAL_USERS: User[] = [
     role: 'team_member',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
     createdAt: '2026-09-03T11:00:00Z',
+    password: 'team123',
   },
 ];
 

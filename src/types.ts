@@ -7,6 +7,7 @@ export interface User {
   role: UserRole;
   avatar?: string;
   createdAt: string;
+  password?: string;
 }
 
 export interface GalleryConfig {

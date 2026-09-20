@@ -8,8 +8,10 @@ interface NavbarProps {
   onOpenCustomerGallery: () => void;
   onOpenTests: () => void;
   onOpenDocs: () => void;
-  currentView: 'admin' | 'team' | 'workspace' | 'customer';
+  currentView: 'admin' | 'team' | 'workspace' | 'customer' | 'auth';
   onNavigateHome: () => void;
+  onLogout: () => void;
+  onOpenAuthModal: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -20,6 +22,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenDocs,
   currentView,
   onNavigateHome,
+  onLogout,
+  onOpenAuthModal,
 }) => {
   const [userDropdownOpen, setUserDropdownOpen] = React.useState(false);
 
@@ -144,98 +148,132 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* User Profile / Switcher Dropdown */}
-          <div className="relative">
-            <button
-              id="user-profile-toggle"
-              onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-              className="flex items-center gap-2 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg border border-neutral-200 hover:bg-neutral-50 transition"
-            >
-              {currentUser?.avatar ? (
-                <img
-                  src={currentUser.avatar}
-                  alt={currentUser.name}
-                  className="w-7 h-7 rounded-full object-cover ring-1 ring-neutral-300"
-                />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-neutral-800 text-white flex items-center justify-center text-xs font-bold">
-                  {currentUser?.name?.charAt(0) || 'U'}
-                </div>
-              )}
-              <span className="text-xs font-medium text-neutral-700 hidden lg:inline">
-                {currentUser?.name || 'Guest'}
-              </span>
-              <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />
-            </button>
+          {currentUser ? (
+            <div className="relative">
+              <button
+                id="user-profile-toggle"
+                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                className="flex items-center gap-2 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg border border-neutral-200 hover:bg-neutral-50 transition"
+              >
+                {currentUser.avatar ? (
+                  <img
+                    src={currentUser.avatar}
+                    alt={currentUser.name}
+                    className="w-7 h-7 rounded-full object-cover ring-1 ring-neutral-300"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-neutral-800 text-white flex items-center justify-center text-xs font-bold">
+                    {currentUser.name?.charAt(0) || 'U'}
+                  </div>
+                )}
+                <span className="text-xs font-medium text-neutral-700 hidden lg:inline">
+                  {currentUser.name}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />
+              </button>
 
-            {userDropdownOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setUserDropdownOpen(false)} />
-                <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-neutral-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                  <div className="px-4 py-2 border-b border-neutral-100">
-                    <p className="text-xs font-medium text-neutral-500">Signed in as</p>
-                    <p className="text-sm font-bold text-neutral-900 truncate">{currentUser?.name}</p>
-                    <p className="text-xs text-neutral-500 truncate">{currentUser?.email}</p>
-                    <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-neutral-100 text-neutral-700 border border-neutral-200">
-                      {currentUser?.role === 'admin' ? 'Administrative Lead (Full Access)' : 'Team Member (Uploads & Assigned)'}
+              {userDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setUserDropdownOpen(false)} />
+                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-neutral-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="px-4 py-2 border-b border-neutral-100">
+                      <p className="text-xs font-medium text-neutral-500">Signed in as</p>
+                      <p className="text-sm font-bold text-neutral-900 truncate">{currentUser.name}</p>
+                      <p className="text-xs text-neutral-500 truncate">{currentUser.email}</p>
+                      <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-neutral-100 text-neutral-700 border border-neutral-200">
+                        {currentUser.role === 'admin' ? 'Administrative Lead (Full Access)' : 'Team Member (Uploads & Assigned)'}
+                      </div>
+                    </div>
+
+                    <div className="px-2 py-1.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 px-2 py-1">
+                        Switch Active User
+                      </p>
+                      <button
+                        onClick={() => {
+                          onSwitchUser('admin@trizen.com');
+                          setUserDropdownOpen(false);
+                        }}
+                        className="w-full text-left px-2.5 py-2 rounded-lg text-xs hover:bg-neutral-50 flex items-center justify-between"
+                      >
+                        <div>
+                          <p className="font-semibold text-neutral-800">Aarav Sharma</p>
+                          <p className="text-[11px] text-neutral-500">Admin / Lead (admin@trizen.com)</p>
+                        </div>
+                        {currentUser.email === 'admin@trizen.com' && (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          onSwitchUser('rahul@trizen.com');
+                          setUserDropdownOpen(false);
+                        }}
+                        className="w-full text-left px-2.5 py-2 rounded-lg text-xs hover:bg-neutral-50 flex items-center justify-between"
+                      >
+                        <div>
+                          <p className="font-semibold text-neutral-800">Rahul Verma</p>
+                          <p className="text-[11px] text-neutral-500">Photographer (rahul@trizen.com)</p>
+                        </div>
+                        {currentUser.email === 'rahul@trizen.com' && (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          onSwitchUser('ananya@trizen.com');
+                          setUserDropdownOpen(false);
+                        }}
+                        className="w-full text-left px-2.5 py-2 rounded-lg text-xs hover:bg-neutral-50 flex items-center justify-between"
+                      >
+                        <div>
+                          <p className="font-semibold text-neutral-800">Ananya Sen</p>
+                          <p className="text-[11px] text-neutral-500">Candid Specialist (ananya@trizen.com)</p>
+                        </div>
+                        {currentUser.email === 'ananya@trizen.com' && (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="border-t border-neutral-100 px-2 py-1 space-y-0.5">
+                      <button
+                        onClick={() => {
+                          setUserDropdownOpen(false);
+                          onOpenAuthModal();
+                        }}
+                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs text-neutral-700 hover:bg-neutral-50 flex items-center gap-2 font-medium"
+                      >
+                        <UserCheck className="w-3.5 h-3.5 text-neutral-500" />
+                        <span>Sign In Another / Register</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setUserDropdownOpen(false);
+                          onLogout();
+                        }}
+                        className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium"
+                      >
+                        <LogOut className="w-3.5 h-3.5 text-red-500" />
+                        <span>Sign Out</span>
+                      </button>
                     </div>
                   </div>
-
-                  <div className="px-2 py-1.5">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 px-2 py-1">
-                      Switch Active User
-                    </p>
-                    <button
-                      onClick={() => {
-                        onSwitchUser('admin@trizen.com');
-                        setUserDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-2.5 py-2 rounded-lg text-xs hover:bg-neutral-50 flex items-center justify-between"
-                    >
-                      <div>
-                        <p className="font-semibold text-neutral-800">Aarav Sharma</p>
-                        <p className="text-[11px] text-neutral-500">Admin / Lead (admin@trizen.com)</p>
-                      </div>
-                      {currentUser?.email === 'admin@trizen.com' && (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        onSwitchUser('rahul@trizen.com');
-                        setUserDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-2.5 py-2 rounded-lg text-xs hover:bg-neutral-50 flex items-center justify-between"
-                    >
-                      <div>
-                        <p className="font-semibold text-neutral-800">Rahul Verma</p>
-                        <p className="text-[11px] text-neutral-500">Photographer (rahul@trizen.com)</p>
-                      </div>
-                      {currentUser?.email === 'rahul@trizen.com' && (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        onSwitchUser('ananya@trizen.com');
-                        setUserDropdownOpen(false);
-                      }}
-                      className="w-full text-left px-2.5 py-2 rounded-lg text-xs hover:bg-neutral-50 flex items-center justify-between"
-                    >
-                      <div>
-                        <p className="font-semibold text-neutral-800">Ananya Sen</p>
-                        <p className="text-[11px] text-neutral-500">Candid Specialist (ananya@trizen.com)</p>
-                      </div>
-                      {currentUser?.email === 'ananya@trizen.com' && (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <button
+              id="nav-signin-btn"
+              onClick={onOpenAuthModal}
+              className="flex items-center gap-1.5 bg-neutral-900 hover:bg-neutral-800 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold transition shadow-xs"
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>Sign In</span>
+            </button>
+          )}
         </div>
       </div>
     </header>

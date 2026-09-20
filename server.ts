@@ -67,6 +67,7 @@ const INITIAL_USERS: User[] = [
     role: 'admin',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     createdAt: '2026-09-01T08:00:00Z',
+    password: 'admin123',
   },
   {
     id: 'usr-team-01',
@@ -75,6 +76,7 @@ const INITIAL_USERS: User[] = [
     role: 'team_member',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
     createdAt: '2026-09-02T09:30:00Z',
+    password: 'team123',
   },
   {
     id: 'usr-team-02',
@@ -83,6 +85,7 @@ const INITIAL_USERS: User[] = [
     role: 'team_member',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
     createdAt: '2026-09-03T11:00:00Z',
+    password: 'team123',
   },
 ];
 
@@ -338,7 +341,7 @@ function requireAdminRole(req: AuthenticatedRequest, res: Response, next: NextFu
 ========================================================================= */
 
 app.post('/api/auth/login', (req: Request, res: Response) => {
-  const { email } = req.body;
+  const { email, password } = req.body;
   if (!email) {
     return res.status(400).json({ error: 'Email is required' });
   }
@@ -348,6 +351,10 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
     return res.status(401).json({ error: 'User not found with this email. Please check your credentials.' });
   }
 
+  if (user.password && password && user.password !== password) {
+    return res.status(401).json({ error: 'Invalid password entered. For demo accounts, use "admin123" or "team123".' });
+  }
+
   res.json({
     token: user.id,
     user,
@@ -355,7 +362,7 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
 });
 
 app.post('/api/auth/register', (req: Request, res: Response) => {
-  const { name, email, role } = req.body;
+  const { name, email, role, password } = req.body;
   if (!name || !email) {
     return res.status(400).json({ error: 'Name and email are required.' });
   }
@@ -370,7 +377,10 @@ app.post('/api/auth/register', (req: Request, res: Response) => {
     name: name.trim(),
     email: email.trim().toLowerCase(),
     role: role === 'admin' ? 'admin' : 'team_member',
-    avatar: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80`,
+    avatar: role === 'admin'
+      ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
+      : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    password: password || 'trizen123',
     createdAt: new Date().toISOString(),
   };
 

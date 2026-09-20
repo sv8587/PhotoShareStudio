@@ -7,13 +7,20 @@ import { CustomerGallery } from './components/CustomerGallery';
 import { CreateEventModal } from './components/CreateEventModal';
 import { SystemTestModal } from './components/SystemTestModal';
 import { DocumentationModal } from './components/DocumentationModal';
+import { AuthScreen } from './components/AuthScreen';
+import { AuthModal } from './components/AuthModal';
 import { User, EventItem } from './types';
 import { INITIAL_USERS, INITIAL_EVENTS } from './mockData';
+import { getActiveUser, logoutUser, loginWithCredentials } from './services/authService';
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<User | null>(INITIAL_USERS[0]);
+  const [currentUser, setCurrentUser] = useState<User | null>(() => getActiveUser());
   const [events, setEvents] = useState<EventItem[]>(INITIAL_EVENTS);
-  const [currentView, setCurrentView] = useState<'admin' | 'team' | 'workspace' | 'customer'>('admin');
+  const [currentView, setCurrentView] = useState<'admin' | 'team' | 'workspace' | 'customer' | 'auth'>(() => {
+    const initialUser = getActiveUser();
+    if (!initialUser) return 'auth';
+    return initialUser.role === 'admin' ? 'admin' : 'team';
+  });
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [customerGallerySlug, setCustomerGallerySlug] = useState<string>('abc123');
 
@@ -21,7 +28,7 @@ export default function App() {
   const [showCreateEvent, setShowCreateEvent] = useState<boolean>(false);
   const [showTestsModal, setShowTestsModal] = useState<boolean>(false);
   const [showDocsModal, setShowDocsModal] = useState<boolean>(false);
-  const [loadingInitial, setLoadingInitial] = useState<boolean>(false);
+  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
 
   // Initialize and check URL hash
   useEffect(() => {
@@ -39,49 +46,38 @@ export default function App() {
     }
   };
 
-  // Initial login with Demo Admin
+  // Sync events for current user on mount or change
   useEffect(() => {
-    loginUser('admin@trizen.com');
-  }, []);
-
-  const loginUser = async (email: string) => {
-    const fallbackUser = INITIAL_USERS.find(u => u.email === email) || INITIAL_USERS[0];
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-      if (res.ok && data.user) {
-        setCurrentUser(data.user);
-        // Automatically set view based on role if not on customer gallery
-        if (currentView !== 'customer') {
-          if (data.user.role === 'admin') {
-            setCurrentView('admin');
-          } else {
-            setCurrentView('team');
-          }
-          setSelectedEventId(null);
-        }
-        await fetchEvents(data.user.id);
-        return;
-      }
-    } catch (err) {
-      console.warn('API login offline or static host, using client store:', err);
+    if (currentUser) {
+      fetchEvents(currentUser.id);
     }
+  }, [currentUser?.id]);
 
-    // Graceful offline/static fallback
-    setCurrentUser(fallbackUser);
-    if (currentView !== 'customer') {
-      if (fallbackUser.role === 'admin') {
-        setCurrentView('admin');
-        setEvents(INITIAL_EVENTS);
-      } else {
-        setCurrentView('team');
-        setEvents(INITIAL_EVENTS.filter(e => e.assignedTeamMemberIds?.includes(fallbackUser.id)));
-      }
-      setSelectedEventId(null);
+  const handleAuthSuccess = (user: User) => {
+    setCurrentUser(user);
+    if (user.role === 'admin') {
+      setCurrentView('admin');
+    } else {
+      setCurrentView('team');
+    }
+    setSelectedEventId(null);
+    fetchEvents(user.id);
+  };
+
+  const handleLogout = () => {
+    logoutUser();
+    setCurrentUser(null);
+    setCurrentView('auth');
+    setSelectedEventId(null);
+  };
+
+  const switchUserByEmail = async (email: string) => {
+    const res = await loginWithCredentials(email);
+    if (res.success && res.user) {
+      handleAuthSuccess(res.user);
+    } else {
+      const fallbackUser = INITIAL_USERS.find(u => u.email.toLowerCase() === email.toLowerCase()) || INITIAL_USERS[0];
+      handleAuthSuccess(fallbackUser);
     }
   };
 
@@ -90,10 +86,13 @@ export default function App() {
       const res = await fetch('/api/events', {
         headers: { Authorization: `Bearer ${userId}` },
       });
-      const data = await res.json();
-      if (res.ok && data.events && data.events.length > 0) {
-        setEvents(data.events);
-        return;
+      const contentType = res.headers.get('content-type') || '';
+      if (res.ok && contentType.includes('application/json')) {
+        const data = await res.json();
+        if (data.events && data.events.length > 0) {
+          setEvents(data.events);
+          return;
+        }
       }
     } catch (err) {
       console.warn('Failed to load events from API, using fallback:', err);
@@ -120,7 +119,9 @@ export default function App() {
 
   const handleExitCustomerGallery = () => {
     window.location.hash = '';
-    if (currentUser?.role === 'admin') {
+    if (!currentUser) {
+      setCurrentView('auth');
+    } else if (currentUser.role === 'admin') {
       setCurrentView('admin');
     } else {
       setCurrentView('team');
@@ -129,23 +130,14 @@ export default function App() {
 
   const handleNavigateHome = () => {
     setSelectedEventId(null);
-    if (currentUser?.role === 'admin') {
+    if (!currentUser) {
+      setCurrentView('auth');
+    } else if (currentUser.role === 'admin') {
       setCurrentView('admin');
     } else {
       setCurrentView('team');
     }
   };
-
-  if (loadingInitial) {
-    return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <div className="w-10 h-10 border-3 border-neutral-900 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-semibold text-neutral-600">Initializing Trizen PhotoShare Platform...</p>
-        </div>
-      </div>
-    );
-  }
 
   // If customer view is active, render full-page customer gallery
   if (currentView === 'customer') {
@@ -162,27 +154,34 @@ export default function App() {
       {/* Top Universal Navigation Bar */}
       <Navbar
         currentUser={currentUser}
-        onSwitchUser={email => loginUser(email)}
+        onSwitchUser={switchUserByEmail}
         onOpenCustomerGallery={() => handleOpenCustomerGallery('abc123')}
         onOpenTests={() => setShowTestsModal(true)}
         onOpenDocs={() => setShowDocsModal(true)}
         currentView={currentView}
         onNavigateHome={handleNavigateHome}
+        onLogout={handleLogout}
+        onOpenAuthModal={() => setShowAuthModal(true)}
       />
 
       {/* Main View Router */}
       <main className="flex-1">
-        {currentView === 'workspace' && selectedEventId && currentUser ? (
+        {!currentUser || currentView === 'auth' ? (
+          <AuthScreen
+            onSuccess={handleAuthSuccess}
+            onOpenCustomerGallery={handleOpenCustomerGallery}
+          />
+        ) : currentView === 'workspace' && selectedEventId ? (
           <EventWorkspace
             eventId={selectedEventId}
             currentUser={currentUser}
             onBack={handleNavigateHome}
             onOpenCustomerGallery={handleOpenCustomerGallery}
           />
-        ) : (currentUser?.role === 'admin' || !currentUser) ? (
+        ) : currentUser.role === 'admin' ? (
           <AdminDashboard
             events={events.length > 0 ? events : INITIAL_EVENTS}
-            currentUser={currentUser || INITIAL_USERS[0]}
+            currentUser={currentUser}
             onSelectEvent={handleSelectEvent}
             onCreateEventClick={() => setShowCreateEvent(true)}
             onOpenCustomerGallery={handleOpenCustomerGallery}
@@ -232,6 +231,14 @@ export default function App() {
 
       {showDocsModal && (
         <DocumentationModal onClose={() => setShowDocsModal(false)} />
+      )}
+
+      {showAuthModal && (
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={handleAuthSuccess}
+        />
       )}
     </div>
   );
